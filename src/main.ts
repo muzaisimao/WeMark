@@ -1,4 +1,7 @@
 import { createApp } from "vue";
+import { createPinia } from "pinia";
 import App from "./App.vue";
+import "highlight.js/styles/github-dark.css";
+import "./styles/theme.css";
 
-createApp(App).mount("#app");
+createApp(App).use(createPinia()).mount("#app");
