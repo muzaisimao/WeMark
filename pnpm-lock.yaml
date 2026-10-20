@@ -9,62 +9,62 @@ importers:
   .:
     dependencies:
       '@shikijs/rehype':
-        specifier: ^4.5.0
+        specifier: 4.5.0
         version: 4.5.0
       '@tauri-apps/api':
-        specifier: ^2
+        specifier: 2.12.4
         version: 2.12.4
       '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.3
+        specifier: 2.8.3
         version: 2.8.3
       '@tauri-apps/plugin-opener':
-        specifier: ^2
+        specifier: 2.7.2
         version: 2.7.2
       pele:
-        specifier: ^1.6.0
-        version: 1.6.0
+        specifier: 1.7.0
+        version: 1.7.0
       pinia:
-        specifier: ^4.1.0
+        specifier: 4.1.0
         version: 4.1.0(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.44(typescript@6.0.3))
       rehype-stringify:
-        specifier: ^10.0.1
+        specifier: 10.0.1
         version: 10.0.1
       remark-gfm:
-        specifier: ^4.0.1
+        specifier: 4.0.1
         version: 4.0.1
       remark-parse:
-        specifier: ^11.0.0
+        specifier: 11.0.0
         version: 11.0.0
       remark-rehype:
-        specifier: ^11.1.2
+        specifier: 11.1.2
         version: 11.1.2
       shiki:
-        specifier: ^4.5.0
+        specifier: 4.5.0
         version: 4.5.0
       unified:
-        specifier: ^11.0.5
+        specifier: 11.0.5
         version: 11.0.5
       vue:
-        specifier: ^3.5.44
+        specifier: 3.5.44
         version: 3.5.44(typescript@6.0.3)
     devDependencies:
       '@tauri-apps/cli':
-        specifier: ^2
+        specifier: 2.12.3
         version: 2.12.3
       '@types/mdast':
-        specifier: ^4.0.4
+        specifier: 4.0.4
         version: 4.0.4
       '@vitejs/plugin-vue':
-        specifier: ^6.0.10
+        specifier: 6.0.10
         version: 6.0.10(vite@8.3.4)(vue@3.5.44(typescript@6.0.3))
       typescript:
-        specifier: ~6.0.3
+        specifier: 6.0.3
         version: 6.0.3
       vite:
-        specifier: ^8.3.4
+        specifier: 8.3.4
         version: 8.3.4
       vue-tsc:
-        specifier: ^3.3.13
+        specifier: 3.3.13
         version: 3.3.13(typescript@6.0.3)
 
 packages:
@@ -715,8 +715,8 @@ packages:
   path-browserify@1.0.1:
     resolution: {integrity: sha512-b7uo2UCUOYZcnF/3ID0lulOJi/bafxa1xPe7ZPsammBSpjSWQkjNxlt635YGS2MiR9GjvuXCtz2emr3jbsz98g==}
 
-  pele@1.6.0:
-    resolution: {integrity: sha512-VfAiVItsOGlGhvnBfphdT28VCG7mXMZxQNOwAGsCtxI2ztbUsT39MraEOYjsapLxVETkdUZscm0DdotYDQMLdw==}
+  pele@1.7.0:
+    resolution: {integrity: sha512-nkYb5VnxsTgwD4NThF6j4pJEC4AhGLJ9ptiL4q/vIzGr9q6ZtoRE3hFr94LgHpZ/xy56d1pw42UAQGaZkjM5XA==}
     engines: {node: '>=20'}
 
   perfect-debounce@2.1.0:
@@ -1643,7 +1643,7 @@ snapshots:
 
   path-browserify@1.0.1: {}
 
-  pele@1.6.0: {}
+  pele@1.7.0: {}
 
   perfect-debounce@2.1.0: {}
 

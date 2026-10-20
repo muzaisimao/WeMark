@@ -102,7 +102,7 @@ function onBlockClick(e: MouseEvent, blockId: string) {
           @click="onBlockClick($event, block.id)"
         >
           <div v-if="block.html" v-html="block.html"></div>
-          <div v-else class="block__placeholder">输入内容…</div>
+          <div v-else class="block__placeholder" aria-label="空白块"></div>
         </article>
         <button
           class="block-row__insert"
@@ -110,7 +110,7 @@ function onBlockClick(e: MouseEvent, blockId: string) {
           title="在下方插入"
           @click.stop="doc.insertBlockAfter(block.id)"
         >
-          +
+          <AppIcon name="plus" :size="12" />
         </button>
       </div>
     </div>
@@ -211,15 +211,24 @@ function onBlockClick(e: MouseEvent, blockId: string) {
 }
 
 .block-row__num {
-  width: 28px;
+  width: 24px;
   flex-shrink: 0;
   text-align: right;
-  padding-right: 10px;
+  padding-right: 8px;
   padding-top: 4px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 11px;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
   color: var(--text-tertiary);
+  opacity: 0.55;
   user-select: none;
+  transition: color 0.12s, opacity 0.12s;
+}
+
+.block-row:hover .block-row__num,
+.block-row--editing .block-row__num {
+  color: var(--accent);
+  opacity: 1;
 }
 
 .block {
@@ -234,6 +243,7 @@ function onBlockClick(e: MouseEvent, blockId: string) {
 }
 
 .block__placeholder {
+  min-height: 1.6em;
   color: var(--text-tertiary);
   font-size: 14px;
   line-height: 1.6;
@@ -268,14 +278,13 @@ function onBlockClick(e: MouseEvent, blockId: string) {
   border-radius: 50%;
   background: var(--panel);
   color: var(--text-secondary);
-  font-size: 15px;
-  line-height: 1;
   display: none;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 1;
   padding: 0;
+  line-height: 0;
 }
 
 .block-row:hover .block-row__insert {

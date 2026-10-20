@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { nextTick, ref, watch } from "vue";
 import AppIcon from "./AppIcon.vue";
 import type { IconName } from "../icons";
 import { useLayoutStore } from "../stores/layout";
@@ -8,9 +8,6 @@ import { renderMarkdown } from "../markdown/parser";
 
 const layout = useLayoutStore();
 const doc = useDocumentStore();
-
-// 预览模式展开高度
-const PREVIEW_HEIGHT = 360;
 
 interface FormatDef {
   key: string;
@@ -41,11 +38,6 @@ const previewMode = ref(false);
 const previewHtml = ref("");
 const inputRef = ref<HTMLTextAreaElement>();
 const fileInputRef = ref<HTMLInputElement>();
-
-// 预览模式下编辑区临时展开
-const footerHeight = computed(() =>
-  previewMode.value ? PREVIEW_HEIGHT : layout.editorHeight
-);
 
 // ---- 文本操作 ----
 
@@ -127,14 +119,18 @@ function onImageChange(e: Event) {
 // ---- 高度自适应（随内容增长，不超过编辑区可用高度） ----
 
 function autoResize() {
-  if (previewMode.value) return; // 预览模式下由 flex 分栏控制高度
   const el = inputRef.value;
   if (!el) return;
+  if (previewMode.value) {
+    // 预览时输入框固定为最小高度，不随内容增长，剩余空间交给预览区
+    el.style.height = "auto";
+    return;
+  }
   const footer = el.closest(".editor") as HTMLElement | null;
   const toolbar = footer?.querySelector(".editor__toolbar") as HTMLElement | null;
   const hint = footer?.querySelector(".editor__hint") as HTMLElement | null;
-  const used = (toolbar?.offsetHeight ?? 0) + (hint?.offsetHeight ?? 0);
-  const maxHeight = (footer?.clientHeight ?? 0) - used;
+  const maxHeight =
+    (footer?.clientHeight ?? 0) - (toolbar?.offsetHeight ?? 0) - (hint?.offsetHeight ?? 0);
   el.style.height = "auto";
   el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
 }
@@ -163,6 +159,7 @@ function togglePreview() {
     previewHtml.value = "";
     schedulePreview();
   }
+  nextTick(autoResize);
 }
 
 watch(
@@ -223,9 +220,16 @@ function formatTime(ts: number): string {
 </script>
 
 <template>
-  <footer class="editor" :style="{ height: `${footerHeight}px` }">
+  <footer
+    class="editor"
+    :class="{ 'editor--editing': doc.editorState.mode === 'editing' }"
+    :style="{ height: `${layout.editorHeight}px` }"
+  >
     <div v-if="doc.editorState.mode === 'editing'" class="editor__hint">
-      <span>正在编辑：第 {{ doc.editingIndex }} 块</span>
+      <span class="editor__hint-label">
+        <span class="editor__hint-dot"></span>
+        正在编辑第 {{ doc.editingIndex }} 块 · 修改后按 Enter 原位更新
+      </span>
       <button
         class="editor__hint-cancel"
         type="button"
@@ -249,6 +253,17 @@ function formatTime(ts: number): string {
 
     <div class="editor__toolbar">
       <div class="editor__formats">
+        <button
+          class="editor__tool editor__preview-toggle"
+          :class="{ 'editor__tool--active': previewMode }"
+          :title="previewMode ? '退出预览' : '预览'"
+          type="button"
+          @click="togglePreview"
+        >
+          <AppIcon :name="previewMode ? 'code' : 'eye'" :size="16" />
+          <span>{{ previewMode ? '退出预览' : '预览' }}</span>
+        </button>
+        <span class="editor__divider"></span>
         <button
           v-for="tool in formatTools"
           :key="tool.key"
@@ -303,16 +318,6 @@ function formatTime(ts: number): string {
         </div>
 
         <button
-          class="editor__tool"
-          :class="{ 'editor__tool--active': previewMode }"
-          :title="previewMode ? '回到编辑' : '预览'"
-          type="button"
-          @click="togglePreview"
-        >
-          <AppIcon :name="previewMode ? 'code' : 'eye'" :size="17" />
-        </button>
-
-        <button
           class="editor__send"
           title="发送"
           type="button"
@@ -340,6 +345,12 @@ function formatTime(ts: number): string {
   flex-direction: column;
   border-top: 1px solid var(--border);
   background: var(--panel);
+  transition: border-top-color 0.15s;
+}
+
+/* 编辑态：顶部 1px 边框变 accent，克制地提示编辑区聚焦 */
+.editor--editing {
+  border-top-color: var(--accent);
 }
 
 .editor__hint {
@@ -351,6 +362,20 @@ function formatTime(ts: number): string {
   color: var(--text-secondary);
   background: var(--panel-2);
   border-bottom: 1px solid var(--border);
+}
+
+.editor__hint-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editor__hint-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
 }
 
 .editor__hint-cancel {
@@ -395,12 +420,14 @@ function formatTime(ts: number): string {
   color: var(--text-tertiary);
 }
 
+/* 预览区：与输入框左右分栏，占右半 */
 .editor__preview {
   flex: 1;
   min-width: 0;
   overflow-y: auto;
   padding: 12px 16px;
   border-left: 1px solid var(--border);
+  background: var(--bg);
   font-size: var(--editor-font-size);
   line-height: 1.6;
   color: var(--text);
@@ -448,6 +475,39 @@ function formatTime(ts: number): string {
 .editor__tool--active {
   background: var(--active);
   color: var(--text);
+}
+
+/* 预览切换按钮：独立分组、带文字与描边，更易点按 */
+.editor__preview-toggle {
+  width: auto;
+  height: 30px;
+  padding: 0 12px;
+  gap: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.editor__preview-toggle:hover {
+  border-color: var(--accent);
+  background: transparent;
+  color: var(--accent);
+}
+
+.editor__preview-toggle.editor__tool--active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.editor__divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 6px;
+  background: var(--border);
+  flex-shrink: 0;
 }
 
 .editor__draft {

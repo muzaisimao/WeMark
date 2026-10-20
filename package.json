@@ -16,7 +16,7 @@
     "@tauri-apps/api": "2.12.4",
     "@tauri-apps/plugin-dialog": "2.8.3",
     "@tauri-apps/plugin-opener": "2.7.2",
-    "pele": "1.6.0",
+    "pele": "1.7.0",
     "pinia": "4.1.0",
     "rehype-stringify": "10.0.1",
     "remark-gfm": "4.0.1",
