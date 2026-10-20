@@ -3,6 +3,17 @@ import { computed, ref } from "vue";
 import { splitBlocks } from "../markdown/parser";
 import { sampleMarkdown } from "../markdown/sample";
 import type { Block } from "../markdown/types";
+import {
+  readTextFile,
+  writeTextFile,
+  listMdFiles,
+  pickOpenFile,
+  pickSaveFile,
+  pickDirectory,
+  basename,
+  stripExt,
+} from "../fs";
+import type { FsNode } from "../fs";
 
 export type EditorState =
   | { mode: "idle" }
@@ -21,6 +32,7 @@ export interface DocNode {
   id: string;
   name: string;
   type: "dir" | "file";
+  path?: string;
   pinned?: boolean;
   children?: DocNode[];
   content?: string;
@@ -109,6 +121,54 @@ function collectFiles(nodes: DocNode[]): DocNode[] {
   return result;
 }
 
+function findFileByPath(nodes: DocNode[], path: string): DocNode | undefined {
+  for (const n of nodes) {
+    if (n.path === path) return n;
+    if (n.type === "dir" && n.children) {
+      const found = findFileByPath(n.children, path);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+// 磁盘目录树（FsNode）转 DocNode：文件内容懒加载，path 作为稳定 id
+function fsToDocNode(node: FsNode): DocNode {
+  if (node.isDir) {
+    return {
+      id: node.path,
+      name: node.name,
+      type: "dir",
+      path: node.path,
+      children: node.children.map(fsToDocNode),
+      updatedAt: 0,
+    };
+  }
+  return {
+    id: node.path,
+    name: node.name,
+    type: "file",
+    path: node.path,
+    content: undefined,
+    updatedAt: 0,
+  };
+}
+
+// 按最近编辑时间排序：目录固定在前，文件按 updatedAt 降序；目录内部递归排序
+function sortNodes(nodes: DocNode[]): DocNode[] {
+  const copy = nodes.map((n) =>
+    n.type === "dir" && n.children
+      ? { ...n, children: sortNodes(n.children) }
+      : n
+  );
+  return copy.sort((a, b) => {
+    if (a.type === "dir" && b.type === "dir") return 0;
+    if (a.type === "dir") return -1;
+    if (b.type === "dir") return 1;
+    return (b.updatedAt ?? 0) - (a.updatedAt ?? 0);
+  });
+}
+
 export const useDocumentStore = defineStore("document", () => {
   const docList = ref<DocNode[]>(createInitialDocs());
   const activeDocId = ref("d1");
@@ -134,9 +194,14 @@ export const useDocumentStore = defineStore("document", () => {
     return idx >= 0 ? idx + 1 : null;
   });
 
-  // 置顶文档（所有 pinned 的 file，扁平）
+  // 排序后的文档树（供列表展示，最近编辑在前）
+  const sortedDocList = computed(() => sortNodes(docList.value));
+
+  // 置顶文档（所有 pinned 的 file，扁平，最近编辑在前）
   const pinnedDocs = computed(() =>
-    collectFiles(docList.value).filter((f) => f.pinned)
+    collectFiles(docList.value)
+      .filter((f) => f.pinned)
+      .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
   );
 
   // 搜索结果（按文档名或内容匹配）
@@ -152,8 +217,8 @@ export const useDocumentStore = defineStore("document", () => {
 
   const searching = computed(() => searchKeyword.value.trim() !== "");
 
-  // 切换文档：保存当前 → 加载新文档
-  function setActiveDoc(id: string) {
+  // 切换文档：保存当前 → 懒加载并激活新文档
+  async function setActiveDoc(id: string) {
     if (id === activeDocId.value) return;
     const current = findFile(docList.value, activeDocId.value);
     if (current) {
@@ -161,12 +226,91 @@ export const useDocumentStore = defineStore("document", () => {
       current.updatedAt = Date.now();
     }
     const next = findFile(docList.value, id);
-    if (next) {
-      activeDocId.value = id;
-      blocks.value = splitBlocks(next.content ?? "");
+    if (!next || next.type !== "file") return;
+    if (next.content == null && next.path) {
+      try {
+        next.content = await readTextFile(next.path);
+      } catch {
+        next.content = "";
+      }
+    }
+    activeDocId.value = id;
+    blocks.value = splitBlocks(next.content ?? "");
+    editorContent.value = "";
+    editorState.value = { mode: "idle" };
+  }
+
+  // 新建文档：选择保存路径 → 写空文件 → 加入文档树并激活
+  async function newDocument() {
+    const path = await pickSaveFile("未命名.md");
+    if (!path) return;
+    await writeTextFile(path, "");
+    const node: DocNode = {
+      id: path,
+      name: stripExt(basename(path)),
+      type: "file",
+      path,
+      content: "",
+      updatedAt: Date.now(),
+    };
+    docList.value.push(node);
+    await setActiveDoc(node.id);
+  }
+
+  // 打开文档：选择文件 → 加入文档树（已存在则切换）并激活
+  async function openDocument() {
+    const picked = await pickOpenFile();
+    if (!picked) return;
+    const existing = findFileByPath(docList.value, picked.path);
+    if (existing) {
+      await setActiveDoc(existing.id);
+      return;
+    }
+    const node: DocNode = {
+      id: picked.path,
+      name: stripExt(picked.name),
+      type: "file",
+      path: picked.path,
+      content: picked.content,
+      updatedAt: Date.now(),
+    };
+    docList.value.push(node);
+    await setActiveDoc(node.id);
+  }
+
+  // 打开目录：选择目录 → 扫描 .md → 重建文档树
+  async function openDirectory() {
+    const root = await pickDirectory();
+    if (!root) return;
+    const nodes = await listMdFiles(root);
+    docList.value = nodes.map(fsToDocNode);
+    expandedDirs.value = {};
+    const first = collectFiles(docList.value)[0];
+    if (first) {
+      await setActiveDoc(first.id);
+    } else {
+      activeDocId.value = "";
+      blocks.value = [];
       editorContent.value = "";
       editorState.value = { mode: "idle" };
     }
+  }
+
+  // 保存当前文档到磁盘
+  async function saveCurrent() {
+    const current = activeDoc.value;
+    if (!current || current.type !== "file") return;
+    let path: string | undefined = current.path;
+    if (!path) {
+      const chosen = await pickSaveFile(`${current.name}.md`);
+      if (!chosen) return;
+      path = chosen;
+      current.path = chosen;
+      current.id = chosen;
+    }
+    current.content = source.value;
+    current.updatedAt = Date.now();
+    await writeTextFile(path, source.value);
   }
 
   function togglePin(id: string) {
@@ -299,6 +443,7 @@ export const useDocumentStore = defineStore("document", () => {
 
   return {
     docList,
+    sortedDocList,
     activeDoc,
     activeDocId,
     blocks,
@@ -313,6 +458,10 @@ export const useDocumentStore = defineStore("document", () => {
     searchResults,
     searching,
     setActiveDoc,
+    newDocument,
+    openDocument,
+    openDirectory,
+    saveCurrent,
     togglePin,
     toggleExpand,
     startEdit,

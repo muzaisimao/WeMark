@@ -1,11 +1,25 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted } from "vue";
 import SideBar from "./components/SideBar.vue";
 import DocList from "./components/DocList.vue";
 import RenderArea from "./components/RenderArea.vue";
 import EditorArea from "./components/EditorArea.vue";
 import { useLayoutStore } from "./stores/layout";
+import { useDocumentStore } from "./stores/document";
 
 const layout = useLayoutStore();
+const doc = useDocumentStore();
+
+// 全局保存快捷键 Cmd/Ctrl+S
+function onGlobalKeydown(e: KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+    e.preventDefault();
+    doc.saveCurrent();
+  }
+}
+
+onMounted(() => window.addEventListener("keydown", onGlobalKeydown));
+onUnmounted(() => window.removeEventListener("keydown", onGlobalKeydown));
 
 function startVDrag(e: MouseEvent) {
   e.preventDefault();

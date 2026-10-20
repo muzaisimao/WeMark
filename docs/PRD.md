@@ -139,9 +139,9 @@ WeMark 是一款基于 Markdown 的桌面文本编辑器，核心差异在于：
 | T3 | 接入 Markdown 解析管线（GFM）并按块级元素切分 | P0 | T1 | ✅ | `specs/02-render-blocks.md` |
 | T4 | 接入 pele.js 渲染 Mermaid 图表 | P0 | T3 | ✅ | `specs/02-render-blocks.md` |
 | T5 | 实现块级往返编辑状态机、点击回填/原位更新与草稿箱 | P0 | T3 | ✅ | `specs/03-block-editing.md` |
-| T6 | 实现文档列表（置顶、树级展开、搜索） | P0 | T1 | ⏳ | `specs/04-document-manager.md` |
-| T7 | 实现编辑区快捷工具栏与图片上传 | P1 | T5 | ⏳ | `specs/05-editor-toolbar.md` |
-| T8 | 实现 Tauri 文件系统读写（新建/打开/保存） | P1 | T1 | ⏳ | `specs/06-filesystem.md` |
+| T6 | 实现文档列表（置顶、树级展开、搜索） | P0 | T1 | ✅ | `specs/04-document-manager.md` |
+| T7 | 实现编辑区快捷工具栏与图片上传 | P1 | T5 | ✅ | `specs/05-editor-toolbar.md` |
+| T8 | 实现 Tauri 文件系统读写（新建/打开/保存） | P1 | T1 | ✅ | `specs/06-filesystem.md` |
 | T9 | 实现功能栏与设置入口 | P1 | T1 | ⏳ | `specs/07-navbar-settings.md` |
 | T10 | 实现主题切换（深色/浅色/跟随系统）与设置持久化 | P1 | T9 | ⏳ | `specs/07-navbar-settings.md` |
 | T11 | 实现区域拖拽调整大小（文档列表栏宽度、编辑区高度） | P1 | T2 | ✅ | `specs/01-scaffold-layout.md` |

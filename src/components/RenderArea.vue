@@ -13,10 +13,22 @@ interface ToolItem {
 }
 
 const tools: ToolItem[] = [
-  { key: "copy", label: "复制", icon: "copy" },
-  { key: "download", label: "导出", icon: "download" },
+  { key: "copy", label: "复制源码", icon: "copy" },
+  { key: "download", label: "导出/保存", icon: "download" },
   { key: "more", label: "更多", icon: "more" },
 ];
+
+async function handleTool(key: string) {
+  if (key === "copy") {
+    try {
+      await navigator.clipboard.writeText(doc.source);
+    } catch {
+      // 剪贴板不可用时忽略
+    }
+  } else if (key === "download") {
+    await doc.saveCurrent();
+  }
+}
 
 const editingId = computed(() =>
   doc.editorState.mode === "editing" ? doc.editorState.blockId : null
@@ -43,6 +55,7 @@ function onBlockClick(e: MouseEvent, blockId: string) {
           class="render__tool"
           :title="tool.label"
           type="button"
+          @click="handleTool(tool.key)"
         >
           <AppIcon :name="tool.icon" :size="16" />
         </button>

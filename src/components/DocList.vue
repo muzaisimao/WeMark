@@ -25,7 +25,7 @@ const treeItems = computed<DisplayItem[]>(() => {
       }
     }
   };
-  walk(doc.docList, 0);
+  walk(doc.sortedDocList, 0);
   return result;
 });
 

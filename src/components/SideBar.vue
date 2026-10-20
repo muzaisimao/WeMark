@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import AppIcon from "./AppIcon.vue";
 import type { IconName } from "../icons";
+import { useDocumentStore } from "../stores/document";
+
+const doc = useDocumentStore();
 
 interface SideItem {
   key: string;
   label: string;
   icon: IconName;
+  action?: () => void;
 }
 
 const topItems: SideItem[] = [
-  { key: "new", label: "新建文档", icon: "plus" },
-  { key: "open", label: "打开", icon: "folder" },
-  { key: "search", label: "搜索", icon: "search" },
+  { key: "new", label: "新建文档", icon: "plus", action: () => doc.newDocument() },
+  { key: "open", label: "打开文档", icon: "file", action: () => doc.openDocument() },
+  { key: "openDir", label: "打开目录", icon: "folder", action: () => doc.openDirectory() },
 ];
 
 const bottomItems: SideItem[] = [
@@ -28,6 +32,7 @@ const bottomItems: SideItem[] = [
         class="sidebar__btn"
         :title="item.label"
         type="button"
+        @click="item.action"
       >
         <AppIcon :name="item.icon" :size="22" />
       </button>

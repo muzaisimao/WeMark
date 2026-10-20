@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { nextTick, ref, watch } from "vue";
 import AppIcon from "./AppIcon.vue";
 import type { IconName } from "../icons";
 import { useLayoutStore } from "../stores/layout";
@@ -8,26 +8,150 @@ import { useDocumentStore } from "../stores/document";
 const layout = useLayoutStore();
 const doc = useDocumentStore();
 
-interface ToolItem {
+interface FormatDef {
   key: string;
   label: string;
   icon: IconName;
+  prefix: string;
+  suffix: string;
+  placeholder: string;
+  block?: boolean;
 }
 
-const formatTools: ToolItem[] = [
-  { key: "bold", label: "加粗", icon: "bold" },
-  { key: "italic", label: "斜体", icon: "italic" },
-  { key: "heading", label: "标题", icon: "heading" },
-  { key: "list", label: "列表", icon: "list" },
-  { key: "code", label: "代码", icon: "code" },
-  { key: "quote", label: "引用", icon: "quote" },
-  { key: "link", label: "链接", icon: "link" },
-  { key: "image", label: "图片", icon: "image" },
+const formatTools: FormatDef[] = [
+  { key: "bold", label: "加粗", icon: "bold", prefix: "**", suffix: "**", placeholder: "加粗文本" },
+  { key: "italic", label: "斜体", icon: "italic", prefix: "*", suffix: "*", placeholder: "斜体文本" },
+  { key: "strike", label: "删除线", icon: "strikethrough", prefix: "~~", suffix: "~~", placeholder: "删除线文本" },
+  { key: "heading", label: "标题", icon: "heading", prefix: "## ", suffix: "", placeholder: "标题", block: true },
+  { key: "list", label: "无序列表", icon: "list", prefix: "- ", suffix: "", placeholder: "列表项", block: true },
+  { key: "task", label: "任务列表", icon: "task", prefix: "- [ ] ", suffix: "", placeholder: "待办项", block: true },
+  { key: "code", label: "行内代码", icon: "code", prefix: "`", suffix: "`", placeholder: "code" },
+  { key: "quote", label: "引用", icon: "quote", prefix: "> ", suffix: "", placeholder: "引用内容", block: true },
+  { key: "link", label: "链接", icon: "link", prefix: "[", suffix: "](url)", placeholder: "链接文字" },
+  { key: "table", label: "表格", icon: "table", prefix: "", suffix: "", placeholder: "" },
+  { key: "image", label: "图片", icon: "image", prefix: "", suffix: "", placeholder: "" },
 ];
 
 const showDrafts = ref(false);
+const inputRef = ref<HTMLTextAreaElement>();
+const fileInputRef = ref<HTMLInputElement>();
+
+// ---- 文本操作 ----
+
+function setContentAndFocus(content: string, selStart: number, selEnd: number) {
+  doc.editorContent = content;
+  nextTick(() => {
+    const el = inputRef.value;
+    if (!el) return;
+    el.focus();
+    el.setSelectionRange(selStart, selEnd);
+    autoResize();
+  });
+}
+
+// 行内格式：包裹选中文本（无选中则插入占位符）
+function applyInline(prefix: string, suffix: string, placeholder: string) {
+  const el = inputRef.value;
+  if (!el) return;
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  const selected = doc.editorContent.slice(start, end);
+  const text = selected || placeholder;
+  const insert = prefix + text + suffix;
+  const content =
+    doc.editorContent.slice(0, start) + insert + doc.editorContent.slice(end);
+  setContentAndFocus(content, start + prefix.length, start + prefix.length + text.length);
+}
+
+// 块级格式：对光标所在行整行加前缀
+function applyBlock(prefix: string, placeholder: string) {
+  const el = inputRef.value;
+  if (!el) return;
+  const start = el.selectionStart;
+  const content = doc.editorContent;
+  const lineStart = content.lastIndexOf("\n", start - 1) + 1;
+  let lineEnd = content.indexOf("\n", start);
+  if (lineEnd === -1) lineEnd = content.length;
+  const line = content.slice(lineStart, lineEnd);
+  const text = line.trim() || placeholder;
+  const newLine = prefix + text;
+  const newContent = content.slice(0, lineStart) + newLine + content.slice(lineEnd);
+  setContentAndFocus(newContent, lineStart + newLine.length, lineStart + newLine.length);
+}
+
+// 在光标处插入文本
+function insertAtCursor(text: string) {
+  const el = inputRef.value;
+  if (!el) return;
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  const content =
+    doc.editorContent.slice(0, start) + text + doc.editorContent.slice(end);
+  const pos = start + text.length;
+  setContentAndFocus(content, pos, pos);
+}
+
+function applyFormat(tool: FormatDef) {
+  if (tool.key === "image") {
+    fileInputRef.value?.click();
+    return;
+  }
+  if (tool.key === "table") {
+    insertAtCursor("\n| 列1 | 列2 |\n| --- | --- |\n| 内容 | 内容 |\n");
+    return;
+  }
+  if (tool.block) applyBlock(tool.prefix, tool.placeholder);
+  else applyInline(tool.prefix, tool.suffix, tool.placeholder);
+}
+
+function onImageChange(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  const name = file.name.replace(/\.[^.]+$/, "");
+  insertAtCursor(`![${name}](${file.name})`);
+  input.value = "";
+}
+
+// ---- 高度自适应（随内容增长，不超过编辑区可用高度） ----
+
+function autoResize() {
+  const el = inputRef.value;
+  if (!el) return;
+  const footer = el.closest(".editor") as HTMLElement | null;
+  const toolbar = footer?.querySelector(".editor__toolbar") as HTMLElement | null;
+  const hint = footer?.querySelector(".editor__hint") as HTMLElement | null;
+  const used = (toolbar?.offsetHeight ?? 0) + (hint?.offsetHeight ?? 0);
+  const maxHeight = (footer?.clientHeight ?? 0) - used;
+  el.style.height = "auto";
+  el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
+}
+
+watch(
+  () => doc.editorContent,
+  () => nextTick(autoResize)
+);
+
+// ---- 键盘 ----
 
 function onKeydown(e: KeyboardEvent) {
+  const mod = e.metaKey || e.ctrlKey;
+  if (mod && e.key.toLowerCase() === "b") {
+    e.preventDefault();
+    applyInline("**", "**", "加粗文本");
+    return;
+  }
+  if (mod && e.key.toLowerCase() === "i") {
+    e.preventDefault();
+    applyInline("*", "*", "斜体文本");
+    return;
+  }
+  if (mod && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    applyInline("[", "](url)", "链接文字");
+    return;
+  }
+
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     doc.send();
@@ -62,10 +186,12 @@ function formatTime(ts: number): string {
     </div>
 
     <textarea
+      ref="inputRef"
       v-model="doc.editorContent"
       class="editor__input"
       placeholder="输入 Markdown，Enter 发送，Shift+Enter 换行"
       @keydown="onKeydown"
+      @input="autoResize"
     ></textarea>
 
     <div class="editor__toolbar">
@@ -76,6 +202,7 @@ function formatTime(ts: number): string {
           class="editor__tool"
           :title="tool.label"
           type="button"
+          @click="applyFormat(tool)"
         >
           <AppIcon :name="tool.icon" :size="17" />
         </button>
@@ -132,6 +259,14 @@ function formatTime(ts: number): string {
         </button>
       </div>
     </div>
+
+    <input
+      ref="fileInputRef"
+      type="file"
+      accept="image/*"
+      class="editor__file-input"
+      @change="onImageChange"
+    />
   </footer>
 </template>
 
@@ -164,8 +299,9 @@ function formatTime(ts: number): string {
 }
 
 .editor__input {
-  flex: 1;
-  min-height: 0;
+  flex: none;
+  min-height: 60px;
+  overflow-y: auto;
   padding: 12px 16px;
   border: none;
   outline: none;
@@ -184,6 +320,7 @@ function formatTime(ts: number): string {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-top: auto;
   padding: 6px 12px;
   border-top: 1px solid var(--border);
 }
@@ -319,5 +456,9 @@ function formatTime(ts: number): string {
 
 .editor__send:hover {
   background: var(--accent-hover);
+}
+
+.editor__file-input {
+  display: none;
 }
 </style>
