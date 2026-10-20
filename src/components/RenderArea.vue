@@ -2,8 +2,9 @@
 import { computed } from "vue";
 import AppIcon from "./AppIcon.vue";
 import type { IconName } from "../icons";
-import { splitBlocks } from "../markdown/parser";
-import { sampleMarkdown } from "../markdown/sample";
+import { useDocumentStore } from "../stores/document";
+
+const doc = useDocumentStore();
 
 interface ToolItem {
   key: string;
@@ -17,14 +18,24 @@ const tools: ToolItem[] = [
   { key: "more", label: "更多", icon: "more" },
 ];
 
-// T3 阶段使用示例文档，后续 T6/T8 接入真实文件
-const blocks = computed(() => splitBlocks(sampleMarkdown));
+const editingId = computed(() =>
+  doc.editorState.mode === "editing" ? doc.editorState.blockId : null
+);
+
+function onBlockClick(e: MouseEvent, blockId: string) {
+  const target = e.target as HTMLElement;
+  // 点击链接、图片、勾选框等可交互元素时不进入编辑
+  if (target.closest("a, img, input")) return;
+  doc.startEdit(blockId);
+}
 </script>
 
 <template>
   <section class="render">
     <header class="render__header">
-      <div class="render__title">产品需求文档.md</div>
+      <div class="render__title">
+        {{ doc.activeDoc ? `${doc.activeDoc.name}.md` : "" }}
+      </div>
       <div class="render__tools">
         <button
           v-for="tool in tools"
@@ -39,16 +50,18 @@ const blocks = computed(() => splitBlocks(sampleMarkdown));
     </header>
 
     <div class="render__body">
-      <div v-if="blocks.length === 0" class="render__empty">
+      <div v-if="doc.blocks.length === 0" class="render__empty">
         <p class="render__empty-title">开始你的 Markdown 创作</p>
         <p class="render__empty-desc">选择左侧文档，或在下方向框中输入内容后发送</p>
       </div>
       <article
-        v-for="block in blocks"
+        v-for="block in doc.blocks"
         :key="block.id"
         class="block"
+        :class="{ 'block--editing': editingId === block.id }"
         :data-type="block.type"
         v-html="block.html"
+        @click="onBlockClick($event, block.id)"
       />
     </div>
   </section>
@@ -127,5 +140,21 @@ const blocks = computed(() => splitBlocks(sampleMarkdown));
 
 .render__empty-desc {
   font-size: 13px;
+}
+
+.block {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.12s, box-shadow 0.12s;
+}
+
+.block:hover {
+  background: var(--hover);
+}
+
+.block--editing {
+  background: var(--active);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 </style>

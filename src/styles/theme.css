@@ -156,3 +156,18 @@ textarea {
   border-top: 1px solid var(--border);
   margin: 16px 0;
 }
+
+.block .mermaid-diagram {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  background: var(--panel-2);
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: 8px;
+}
+
+.block .mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}

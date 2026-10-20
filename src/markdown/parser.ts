@@ -2,26 +2,35 @@ import MarkdownIt from "markdown-it";
 import type { Token } from "markdown-it";
 import taskLists from "markdown-it-task-lists";
 import hljs from "highlight.js";
+import { render as renderMermaid } from "pele";
 import type { Block, BlockType } from "./types";
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 const md = new MarkdownIt({
   html: false,
   linkify: true,
-  highlight: (str, lang) => {
+  highlight: (str, lang): string => {
     if (lang && hljs.getLanguage(lang)) {
       try {
         const highlighted = hljs.highlight(str, {
           language: lang,
           ignoreIllegals: true,
         }).value;
-        return `<pre class="hljs"><code class="language-${md.utils.escapeHtml(
+        return `<pre class="hljs"><code class="language-${escapeHtml(
           lang
         )}">${highlighted}</code></pre>`;
       } catch {
         // 高亮失败则回退到转义文本
       }
     }
-    return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`;
+    return `<pre class="hljs"><code>${escapeHtml(str)}</code></pre>`;
   },
 });
 
@@ -63,7 +72,7 @@ export function splitBlocks(source: string): Block[] {
   }
   if (current.length > 0) rawBlocks.push(current);
 
-  return rawBlocks.map((blockTokens, index) => {
+  return rawBlocks.map((blockTokens) => {
     const first = blockTokens[0];
     const blockSource = extractSource(source, first.map ?? null);
     let type: BlockType = TOKEN_TO_TYPE[first.type] ?? "paragraph";
@@ -81,14 +90,25 @@ export function splitBlocks(source: string): Block[] {
       type = "image";
     }
 
-    const html = md.renderer.render(blockTokens, md.options, {});
+    let html = md.renderer.render(blockTokens, md.options, {});
+
+    // Mermaid 图表：用 pele.js 渲染为主题化 SVG
+    if (type === "mermaid") {
+      const mermaidCode = blockTokens[0].content ?? "";
+      try {
+        const result = renderMermaid(mermaidCode);
+        html = `<div class="mermaid-diagram">${result.svg}</div>`;
+      } catch {
+        // 渲染失败时回退为普通代码块
+        html = `<pre class="hljs"><code>${escapeHtml(mermaidCode)}</code></pre>`;
+      }
+    }
 
     return {
       id: crypto.randomUUID(),
       source: blockSource,
       type,
       html,
-      index,
     };
   });
 }

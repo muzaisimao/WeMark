@@ -28,5 +28,13 @@ export const sampleMarkdown = [
   "",
   "![示例图片](https://picsum.photos/seed/wemark/600/300)",
   "",
+  "```mermaid",
+  "flowchart TD",
+  "    A[开始] --> B{判断}",
+  "    B -->|是| C[处理]",
+  "    B -->|否| D[结束]",
+  "    C --> D",
+  "```",
+  "",
   "---",
 ].join("\n");

@@ -1,44 +1,36 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import AppIcon from "./AppIcon.vue";
 import { useLayoutStore } from "../stores/layout";
+import { useDocumentStore } from "../stores/document";
+import type { DocNode } from "../stores/document";
 
 const layout = useLayoutStore();
+const doc = useDocumentStore();
 
-interface DocNode {
-  id: string;
-  name: string;
-  type: "dir" | "file";
-  pinned?: boolean;
-  children?: DocNode[];
+interface DisplayItem {
+  node: DocNode;
+  depth: number;
 }
 
-// T2 阶段使用 mock 数据，T6 接入真实文档树
-const docs = ref<DocNode[]>([
-  { id: "d1", name: "产品需求文档", type: "file", pinned: true },
-  { id: "d2", name: "项目周报", type: "file", pinned: true },
-  {
-    id: "dir1",
-    name: "工作笔记",
-    type: "dir",
-    children: [
-      { id: "d3", name: "会议纪要", type: "file" },
-      { id: "d4", name: "技术调研", type: "file" },
-      { id: "d5", name: "读书笔记", type: "file" },
-    ],
-  },
-  { id: "d6", name: "个人计划", type: "file" },
-]);
+// 树形展示列表：置顶文件单独归入「置顶」分组，其余按目录递归展开
+const treeItems = computed<DisplayItem[]>(() => {
+  const result: DisplayItem[] = [];
+  const walk = (nodes: DocNode[], depth: number) => {
+    for (const n of nodes) {
+      if (n.type === "file" && n.pinned) continue;
+      result.push({ node: n, depth });
+      if (n.type === "dir" && doc.expandedDirs[n.id] && n.children) {
+        walk(n.children, depth + 1);
+      }
+    }
+  };
+  walk(doc.docList, 0);
+  return result;
+});
 
-const keyword = ref("");
-const activeId = ref("d1");
-const expanded = ref<Record<string, boolean>>({ dir1: true });
-
-const pinnedDocs = computed(() => docs.value.filter((d) => d.pinned));
-const normalDocs = computed(() => docs.value.filter((d) => !d.pinned));
-
-function toggle(id: string) {
-  expanded.value[id] = !expanded.value[id];
+function indent(depth: number): string {
+  return `${16 + depth * 28}px`;
 }
 </script>
 
@@ -47,7 +39,7 @@ function toggle(id: string) {
     <div class="doclist__search">
       <AppIcon name="search" :size="14" class="doclist__search-icon" />
       <input
-        v-model="keyword"
+        v-model="doc.searchKeyword"
         class="doclist__input"
         type="text"
         placeholder="搜索文档或内容"
@@ -55,58 +47,88 @@ function toggle(id: string) {
     </div>
 
     <div class="doclist__scroll">
-      <template v-if="pinnedDocs.length">
-        <div class="doclist__group-label">置顶</div>
+      <template v-if="doc.searching">
+        <div class="doclist__group-label">搜索结果</div>
+        <div v-if="doc.searchResults.length === 0" class="doclist__empty">
+          无匹配文档
+        </div>
         <div
-          v-for="doc in pinnedDocs"
-          :key="doc.id"
+          v-for="item in doc.searchResults"
+          :key="item.id"
           class="doclist__item"
-          :class="{ 'doclist__item--active': activeId === doc.id }"
-          @click="activeId = doc.id"
+          :class="{ 'doclist__item--active': doc.activeDocId === item.id }"
+          @click="doc.setActiveDoc(item.id)"
         >
           <AppIcon name="file" :size="16" />
-          <span class="doclist__name">{{ doc.name }}</span>
+          <span class="doclist__name">{{ item.name }}</span>
         </div>
       </template>
 
-      <div class="doclist__group-label">文档</div>
-
-      <template v-for="doc in normalDocs" :key="doc.id">
-        <div
-          v-if="doc.type === 'dir'"
-          class="doclist__item doclist__item--dir"
-          @click="toggle(doc.id)"
-        >
-          <AppIcon
-            name="chevron"
-            :size="14"
-            class="doclist__chevron"
-            :class="{ 'doclist__chevron--open': expanded[doc.id] }"
-          />
-          <AppIcon name="folder" :size="16" />
-          <span class="doclist__name">{{ doc.name }}</span>
-        </div>
-        <template v-if="doc.type === 'dir' && expanded[doc.id]">
+      <template v-else>
+        <template v-if="doc.pinnedDocs.length">
+          <div class="doclist__group-label">置顶</div>
           <div
-            v-for="child in doc.children ?? []"
-            :key="child.id"
-            class="doclist__item doclist__item--child"
-            :class="{ 'doclist__item--active': activeId === child.id }"
-            @click="activeId = child.id"
+            v-for="item in doc.pinnedDocs"
+            :key="item.id"
+            class="doclist__item"
+            :class="{ 'doclist__item--active': doc.activeDocId === item.id }"
+            @click="doc.setActiveDoc(item.id)"
           >
             <AppIcon name="file" :size="16" />
-            <span class="doclist__name">{{ child.name }}</span>
+            <span class="doclist__name">{{ item.name }}</span>
+            <button
+              class="doclist__pin doclist__pin--active"
+              type="button"
+              title="取消置顶"
+              @click.stop="doc.togglePin(item.id)"
+            >
+              <AppIcon name="pin" :size="13" />
+            </button>
           </div>
         </template>
-        <div
-          v-else
-          class="doclist__item"
-          :class="{ 'doclist__item--active': activeId === doc.id }"
-          @click="activeId = doc.id"
-        >
-          <AppIcon name="file" :size="16" />
-          <span class="doclist__name">{{ doc.name }}</span>
-        </div>
+
+        <div class="doclist__group-label">文档</div>
+
+        <template v-for="item in treeItems" :key="item.node.id">
+          <div
+            v-if="item.node.type === 'dir'"
+            class="doclist__item doclist__item--dir"
+            :style="{ paddingLeft: indent(item.depth) }"
+            @click="doc.toggleExpand(item.node.id)"
+          >
+            <AppIcon
+              name="chevron"
+              :size="14"
+              class="doclist__chevron"
+              :class="{
+                'doclist__chevron--open': doc.expandedDirs[item.node.id],
+              }"
+            />
+            <AppIcon name="folder" :size="16" />
+            <span class="doclist__name">{{ item.node.name }}</span>
+          </div>
+          <div
+            v-else
+            class="doclist__item"
+            :class="{
+              'doclist__item--active': doc.activeDocId === item.node.id,
+            }"
+            :style="{ paddingLeft: indent(item.depth) }"
+            @click="doc.setActiveDoc(item.node.id)"
+          >
+            <AppIcon name="file" :size="16" />
+            <span class="doclist__name">{{ item.node.name }}</span>
+            <button
+              class="doclist__pin"
+              :class="{ 'doclist__pin--active': item.node.pinned }"
+              type="button"
+              :title="item.node.pinned ? '取消置顶' : '置顶'"
+              @click.stop="doc.togglePin(item.node.id)"
+            >
+              <AppIcon name="pin" :size="13" />
+            </button>
+          </div>
+        </template>
       </template>
     </div>
   </aside>
@@ -177,8 +199,34 @@ function toggle(id: string) {
   color: var(--text);
 }
 
-.doclist__item--child {
-  padding-left: 44px;
+.doclist__empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.doclist__pin {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.doclist__item:hover .doclist__pin {
+  display: inline-flex;
+}
+
+.doclist__pin--active {
+  display: inline-flex;
+  color: var(--accent);
 }
 
 .doclist__chevron {

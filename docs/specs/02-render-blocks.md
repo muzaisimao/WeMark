@@ -43,10 +43,10 @@ type BlockType =
 
 ## 3. 验收标准
 
-- [ ] 完整 GFM 语法正确渲染。
-- [ ] 每个块级元素被正确切分为独立 Block，且 `source` 可回填。
-- [ ] `` ```mermaid `` 代码块由 pele.js 渲染为 SVG。
-- [ ] 代码块按语言高亮。
+- [x] 完整 GFM 语法正确渲染。
+- [x] 每个块级元素被正确切分为独立 Block，且 `source` 可回填。
+- [x] `` ```mermaid `` 代码块由 pele.js 渲染为 SVG。
+- [x] 代码块按语言高亮。
 
 ## 4. 涉及任务
 
@@ -58,3 +58,5 @@ type BlockType =
 | 日期 | 说明 |
 |------|------|
 | 2026-10-20 | 初稿：解析管线、块级切分、GFM、代码高亮、pele.js |
+| 2026-10-20 | T3 完成：采用 markdown-it + highlight.js，实现块级切分并通过 playwright 验证 |
+| 2026-10-20 | T4 完成：接入 pele.js 渲染 Mermaid 图表（同步 render → SVG），失败回退代码块 |
