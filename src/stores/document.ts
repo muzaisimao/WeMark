@@ -174,8 +174,14 @@ export const useDocumentStore = defineStore("document", () => {
   const activeDocId = ref("d1");
 
   // 当前文档内容（块列表为主状态）
-  const initialDoc = findFile(docList.value, "d1");
-  const blocks = ref<Block[]>(splitBlocks(initialDoc?.content ?? ""));
+  const blocks = ref<Block[]>([]);
+
+  // 初始加载默认文档（渲染为异步）
+  async function loadInitialDoc() {
+    const initialDoc = findFile(docList.value, "d1");
+    blocks.value = await splitBlocks(initialDoc?.content ?? "");
+  }
+  void loadInitialDoc();
 
   const editorState = ref<EditorState>({ mode: "idle" });
   const editorContent = ref("");
@@ -235,7 +241,7 @@ export const useDocumentStore = defineStore("document", () => {
       }
     }
     activeDocId.value = id;
-    blocks.value = splitBlocks(next.content ?? "");
+    blocks.value = await splitBlocks(next.content ?? "");
     editorContent.value = "";
     editorState.value = { mode: "idle" };
   }
@@ -333,12 +339,27 @@ export const useDocumentStore = defineStore("document", () => {
     editorState.value = { mode: "editing", blockId };
   }
 
+  // 在某块下方插入空块并进入编辑
+  function insertBlockAfter(blockId: string) {
+    const idx = blocks.value.findIndex((b) => b.id === blockId);
+    if (idx < 0) return;
+    const newBlock: Block = {
+      id: crypto.randomUUID(),
+      source: "",
+      type: "paragraph",
+      html: "",
+    };
+    blocks.value.splice(idx + 1, 0, newBlock);
+    editorContent.value = "";
+    editorState.value = { mode: "editing", blockId: newBlock.id };
+  }
+
   // 发送：editing 原位替换 / idle 追加到末尾
-  function send() {
+  async function send() {
     const content = editorContent.value;
     if (!content.trim()) return;
 
-    const newBlocks = splitBlocks(content);
+    const newBlocks = await splitBlocks(content);
     if (newBlocks.length === 0) return;
 
     const state = editorState.value;
@@ -364,6 +385,14 @@ export const useDocumentStore = defineStore("document", () => {
   }
 
   function cancelEdit() {
+    const state = editorState.value;
+    if (state.mode === "editing") {
+      const block = blocks.value.find((b) => b.id === state.blockId);
+      // 取消编辑空块时删除该空块（来自「下方插入」的占位块）
+      if (block && !block.source) {
+        blocks.value = blocks.value.filter((b) => b.id !== block.id);
+      }
+    }
     editorContent.value = "";
     editorState.value = { mode: "idle" };
   }
@@ -465,6 +494,7 @@ export const useDocumentStore = defineStore("document", () => {
     togglePin,
     toggleExpand,
     startEdit,
+    insertBlockAfter,
     send,
     cancelEdit,
     saveDraft,

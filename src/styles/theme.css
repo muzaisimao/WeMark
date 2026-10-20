@@ -127,7 +127,7 @@ textarea {
   border-radius: 4px;
 }
 
-.block pre.hljs {
+.block pre {
   padding: 12px 14px;
   border-radius: 8px;
   overflow-x: auto;
@@ -136,9 +136,19 @@ textarea {
   line-height: 1.5;
 }
 
-.block pre.hljs code {
+.block pre code {
   background: transparent;
   padding: 0;
+}
+
+/* Shiki 双主题：深色主题下覆盖为 --shiki-dark 变量 */
+:root[data-theme="dark"] .shiki,
+:root[data-theme="dark"] .shiki span {
+  color: var(--shiki-dark) !important;
+}
+
+:root[data-theme="dark"] .shiki {
+  background-color: var(--shiki-dark-bg) !important;
 }
 
 .block blockquote {

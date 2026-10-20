@@ -98,6 +98,11 @@ function startHDrag(e: MouseEvent) {
 
 .app__v-resizer {
   width: 4px;
+  /* 负 margin 使其叠在两侧面板之上，不占视觉空间、不产生色缝 */
+  margin-left: -2px;
+  margin-right: -2px;
+  position: relative;
+  z-index: 2;
   flex-shrink: 0;
   cursor: col-resize;
   background: transparent;

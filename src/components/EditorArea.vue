@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import AppIcon from "./AppIcon.vue";
 import type { IconName } from "../icons";
 import { useLayoutStore } from "../stores/layout";
 import { useDocumentStore } from "../stores/document";
+import { renderMarkdown } from "../markdown/parser";
 
 const layout = useLayoutStore();
 const doc = useDocumentStore();
+
+// 预览模式展开高度
+const PREVIEW_HEIGHT = 360;
 
 interface FormatDef {
   key: string;
@@ -33,8 +37,15 @@ const formatTools: FormatDef[] = [
 ];
 
 const showDrafts = ref(false);
+const previewMode = ref(false);
+const previewHtml = ref("");
 const inputRef = ref<HTMLTextAreaElement>();
 const fileInputRef = ref<HTMLInputElement>();
+
+// 预览模式下编辑区临时展开
+const footerHeight = computed(() =>
+  previewMode.value ? PREVIEW_HEIGHT : layout.editorHeight
+);
 
 // ---- 文本操作 ----
 
@@ -116,6 +127,7 @@ function onImageChange(e: Event) {
 // ---- 高度自适应（随内容增长，不超过编辑区可用高度） ----
 
 function autoResize() {
+  if (previewMode.value) return; // 预览模式下由 flex 分栏控制高度
   const el = inputRef.value;
   if (!el) return;
   const footer = el.closest(".editor") as HTMLElement | null;
@@ -130,6 +142,44 @@ function autoResize() {
 watch(
   () => doc.editorContent,
   () => nextTick(autoResize)
+);
+
+// ---- 预览模式 ----
+
+let previewTimer: ReturnType<typeof setTimeout> | undefined;
+
+async function renderPreviewNow() {
+  previewHtml.value = await renderMarkdown(doc.editorContent);
+}
+
+function schedulePreview() {
+  if (previewTimer) clearTimeout(previewTimer);
+  previewTimer = setTimeout(renderPreviewNow, 200);
+}
+
+function togglePreview() {
+  previewMode.value = !previewMode.value;
+  if (previewMode.value) {
+    previewHtml.value = "";
+    schedulePreview();
+  }
+}
+
+watch(
+  () => doc.editorContent,
+  () => {
+    if (previewMode.value) schedulePreview();
+  }
+);
+
+// 进入编辑态（点击块 / 插入块）时聚焦输入框
+watch(
+  () => doc.editorState,
+  (state) => {
+    if (state.mode === "editing") {
+      nextTick(() => inputRef.value?.focus());
+    }
+  }
 );
 
 // ---- 键盘 ----
@@ -173,7 +223,7 @@ function formatTime(ts: number): string {
 </script>
 
 <template>
-  <footer class="editor" :style="{ height: `${layout.editorHeight}px` }">
+  <footer class="editor" :style="{ height: `${footerHeight}px` }">
     <div v-if="doc.editorState.mode === 'editing'" class="editor__hint">
       <span>正在编辑：第 {{ doc.editingIndex }} 块</span>
       <button
@@ -185,14 +235,17 @@ function formatTime(ts: number): string {
       </button>
     </div>
 
-    <textarea
-      ref="inputRef"
-      v-model="doc.editorContent"
-      class="editor__input"
-      placeholder="输入 Markdown，Enter 发送，Shift+Enter 换行"
-      @keydown="onKeydown"
-      @input="autoResize"
-    ></textarea>
+    <div class="editor__body" :class="{ 'editor__body--preview': previewMode }">
+      <textarea
+        ref="inputRef"
+        v-model="doc.editorContent"
+        class="editor__input"
+        placeholder="输入 Markdown，Enter 发送，Shift+Enter 换行"
+        @keydown="onKeydown"
+        @input="autoResize"
+      ></textarea>
+      <div v-if="previewMode" class="editor__preview" v-html="previewHtml"></div>
+    </div>
 
     <div class="editor__toolbar">
       <div class="editor__formats">
@@ -250,6 +303,16 @@ function formatTime(ts: number): string {
         </div>
 
         <button
+          class="editor__tool"
+          :class="{ 'editor__tool--active': previewMode }"
+          :title="previewMode ? '回到编辑' : '预览'"
+          type="button"
+          @click="togglePreview"
+        >
+          <AppIcon :name="previewMode ? 'code' : 'eye'" :size="17" />
+        </button>
+
+        <button
           class="editor__send"
           title="发送"
           type="button"
@@ -298,6 +361,17 @@ function formatTime(ts: number): string {
   font-size: 12px;
 }
 
+.editor__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.editor__body--preview {
+  flex-direction: row;
+}
+
 .editor__input {
   flex: none;
   min-height: 60px;
@@ -312,8 +386,24 @@ function formatTime(ts: number): string {
   color: var(--text);
 }
 
+.editor__body--preview .editor__input {
+  flex: 1;
+  min-height: 0;
+}
+
 .editor__input::placeholder {
   color: var(--text-tertiary);
+}
+
+.editor__preview {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 12px 16px;
+  border-left: 1px solid var(--border);
+  font-size: var(--editor-font-size);
+  line-height: 1.6;
+  color: var(--text);
 }
 
 .editor__toolbar {

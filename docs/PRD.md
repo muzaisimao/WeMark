@@ -127,6 +127,9 @@ WeMark 是一款基于 Markdown 的桌面文本编辑器，核心差异在于：
 | M5 | 编辑区与快捷工具栏 | 输入框、格式快捷操作、图片上传 | P1 | `specs/05-editor-toolbar.md` |
 | M6 | 文件系统集成 | Tauri 读写 `.md`、新建/打开/保存 | P1 | `specs/06-filesystem.md` |
 | M7 | 功能栏与设置 | 功能图标、设置入口 | P1 | `specs/07-navbar-settings.md` |
+| M8 | 渲染器迁移 | unified/remark 分块 + rehype-shiki 渲染，替代 markdown-it | P0 | `specs/08-renderer-migration.md` |
+| M9 | 渲染区交互增强 | 块号、hover 高亮、块插入、滚动定位 | P1 | `specs/09-block-interactions.md` |
+| M10 | 编辑区预览 | 分栏预览（形态 A），预留 WYSIWYG 方向 | P1 | `specs/10-editor-preview.md` |
 
 ## 7. 任务列表（Task List）
 
@@ -145,6 +148,12 @@ WeMark 是一款基于 Markdown 的桌面文本编辑器，核心差异在于：
 | T9 | 实现功能栏与设置入口 | P1 | T1 | ✅ | `specs/07-navbar-settings.md` |
 | T10 | 实现主题切换（深色/浅色/跟随系统）与设置持久化 | P1 | T9 | ✅ | `specs/07-navbar-settings.md` |
 | T11 | 实现区域拖拽调整大小（文档列表栏宽度、编辑区高度） | P1 | T2 | ✅ | `specs/01-scaffold-layout.md` |
+| T12 | 渲染器迁移到 unified/remark + rehype-shiki | P0 | T3 | ⏳ | `specs/08-renderer-migration.md` |
+| T13 | 块号 + hover 高亮增强 | P1 | T12 | ⏳ | `specs/09-block-interactions.md` |
+| T14 | 编辑区分栏预览（形态 A） | P1 | T12 | ⏳ | `specs/10-editor-preview.md` |
+| T15 | 块插入（hover `+` 号，下方插入） | P1 | T5 | ⏳ | `specs/09-block-interactions.md` |
+| T16 | 滚动定位（点击块/搜索跳转滚动到块） | P1 | T6 | ⏳ | `specs/09-block-interactions.md` |
+| T17 | 修复 v-resizer 分隔线空缝 bug | P2 | T2 | ⏳ | `specs/09-block-interactions.md` |
 
 ## 8. 子 PRD 规范
 
@@ -158,6 +167,7 @@ WeMark 是一款基于 Markdown 的桌面文本编辑器，核心差异在于：
 1. **M0 — 可运行骨架**：T1 完成，能 `npm run tauri dev` 启动空窗口。
 2. **MVP — 核心闭环**：T2~T6 完成，能新建/打开 `.md`，以聊天式块级编辑完成「写 → 发 → 渲染 → 点 → 改 → 原位回归」全流程。
 3. **V1 — 体验完善**：T7~T11 完成，补齐工具栏、图片上传、文件管理、设置、主题切换与区域拖拽。
+4. **V1.1 — 渲染与编辑体验升级**：T12~T17 完成，渲染器迁到 unified/remark、块号与 hover、编辑区分栏预览、块插入、滚动定位、布局打磨。
 
 ## 10. 变更记录
 
@@ -166,3 +176,4 @@ WeMark 是一款基于 Markdown 的桌面文本编辑器，核心差异在于：
 | 2026-10-20 | v0.1 | 初稿：确立产品定位、四栏布局、块级往返编辑核心交互、任务列表 |
 | 2026-10-20 | v0.2 | 新增「草稿箱」：未发送内容自动入草稿、工具栏下拉恢复（连同编辑目标）、仅存内存 |
 | 2026-10-20 | v0.3 | 新增主题双模式（深色/浅色/跟随系统）、区域拖拽调整大小（T10/T11） |
+| 2026-10-21 | v0.4 | 新增 V1.1：渲染器迁移（unified/remark + rehype-shiki）、块号/hover、编辑区分栏预览（形态 A）、块插入、滚动定位、分隔线修复；预留 WYSIWYG（形态 B）方向 |

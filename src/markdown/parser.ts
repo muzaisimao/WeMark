@@ -1,114 +1,115 @@
-import MarkdownIt from "markdown-it";
-import type { Token } from "markdown-it";
-import taskLists from "markdown-it-task-lists";
-import hljs from "highlight.js";
+import { unified } from "unified";
+import remarkParse from "remark-parse";
+import remarkGfm from "remark-gfm";
+import remarkRehype from "remark-rehype";
+import rehypeStringify from "rehype-stringify";
+import rehypeShiki from "@shikijs/rehype";
 import { render as renderMermaid } from "pele";
+import type { BuiltinLanguage } from "shiki";
+import type { Root, RootContent, Paragraph } from "mdast";
 import type { Block, BlockType } from "./types";
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+// 常用代码语言（限制预加载体积，未列出的语言回退为纯文本）
+const LANGS: BuiltinLanguage[] = [
+  "typescript",
+  "javascript",
+  "tsx",
+  "jsx",
+  "rust",
+  "python",
+  "bash",
+  "json",
+  "html",
+  "css",
+  "scss",
+  "markdown",
+  "yaml",
+  "toml",
+  "sql",
+  "java",
+  "go",
+  "c",
+  "cpp",
+];
 
-const md = new MarkdownIt({
-  html: false,
-  linkify: true,
-  highlight: (str, lang): string => {
-    if (lang && hljs.getLanguage(lang)) {
-      try {
-        const highlighted = hljs.highlight(str, {
-          language: lang,
-          ignoreIllegals: true,
-        }).value;
-        return `<pre class="hljs"><code class="language-${escapeHtml(
-          lang
-        )}">${highlighted}</code></pre>`;
-      } catch {
-        // 高亮失败则回退到转义文本
-      }
-    }
-    return `<pre class="hljs"><code>${escapeHtml(str)}</code></pre>`;
-  },
-});
+const parser = unified().use(remarkParse).use(remarkGfm);
 
-md.use(taskLists, { enabled: true, label: true });
+const renderer = unified()
+  .use(remarkRehype)
+  .use(rehypeShiki, {
+    langs: LANGS,
+    themes: { light: "github-light", dark: "github-dark" },
+    defaultColor: "light",
+  })
+  .use(rehypeStringify);
 
-const TOKEN_TO_TYPE: Record<string, BlockType> = {
-  heading_open: "heading",
-  paragraph_open: "paragraph",
-  bullet_list_open: "list",
-  ordered_list_open: "list",
-  fence: "code",
-  blockquote_open: "blockquote",
-  table_open: "table",
-  hr: "hr",
+const NODE_TYPE_TO_BLOCK: Record<string, BlockType> = {
+  heading: "heading",
+  paragraph: "paragraph",
+  list: "list",
+  code: "code",
+  table: "table",
+  blockquote: "blockquote",
+  thematicBreak: "hr",
 };
 
-const IMAGE_ONLY = /^!\[[^\]]*\]\([^)]*\)\s*$/;
-
-function extractSource(source: string, map: [number, number] | null): string {
-  if (!map) return "";
-  const lines = source.split("\n");
-  return lines.slice(map[0], map[1]).join("\n").replace(/\n+$/, "");
+function isImageOnlyParagraph(node: Paragraph): boolean {
+  return node.children.length === 1 && node.children[0].type === "image";
 }
 
-export function splitBlocks(source: string): Block[] {
-  const tokens = md.parse(source, {});
-  const rawBlocks: Token[][] = [];
-  let current: Token[] = [];
+// 从原始源码按节点 position 精确截取该块的 Markdown 源码
+function extractSource(source: string, node: RootContent): string {
+  if (!node.position) return "";
+  const start = node.position.start.offset ?? 0;
+  const end = node.position.end.offset ?? source.length;
+  return source.slice(start, end).replace(/\n+$/, "");
+}
 
-  for (const token of tokens) {
-    const isBlockStart =
-      token.level === 0 && token.type !== "inline" && token.nesting !== -1;
-    if (isBlockStart) {
-      if (current.length > 0) rawBlocks.push(current);
-      current = [token];
-    } else {
-      current.push(token);
+function nodeToType(node: RootContent): BlockType {
+  if (node.type === "code") {
+    return (node.lang ?? "").trim().toLowerCase() === "mermaid"
+      ? "mermaid"
+      : "code";
+  }
+  if (node.type === "paragraph" && isImageOnlyParagraph(node)) {
+    return "image";
+  }
+  return NODE_TYPE_TO_BLOCK[node.type] ?? "paragraph";
+}
+
+async function renderNode(node: RootContent): Promise<string> {
+  // Mermaid 代码块走 pele，渲染失败回退为普通代码块
+  if (node.type === "code" && (node.lang ?? "").trim().toLowerCase() === "mermaid") {
+    const code = node.value ?? "";
+    try {
+      const result = renderMermaid(code);
+      return `<div class="mermaid-diagram">${result.svg}</div>`;
+    } catch {
+      // 回退到普通代码块渲染
     }
   }
-  if (current.length > 0) rawBlocks.push(current);
 
-  return rawBlocks.map((blockTokens) => {
-    const first = blockTokens[0];
-    const blockSource = extractSource(source, first.map ?? null);
-    let type: BlockType = TOKEN_TO_TYPE[first.type] ?? "paragraph";
+  const root: Root = { type: "root", children: [node] };
+  const hast = await renderer.run(root);
+  return renderer.stringify(hast);
+}
 
-    // Mermaid 代码块识别（渲染在 T4 接入 pele.js）
-    if (first.type === "fence") {
-      const info = (first.info ?? "").trim().toLowerCase();
-      if (info === "mermaid") {
-        type = "mermaid";
-      }
-    }
-
-    // 纯图片段落识别
-    if (type === "paragraph" && IMAGE_ONLY.test(blockSource.trim())) {
-      type = "image";
-    }
-
-    let html = md.renderer.render(blockTokens, md.options, {});
-
-    // Mermaid 图表：用 pele.js 渲染为主题化 SVG
-    if (type === "mermaid") {
-      const mermaidCode = blockTokens[0].content ?? "";
-      try {
-        const result = renderMermaid(mermaidCode);
-        html = `<div class="mermaid-diagram">${result.svg}</div>`;
-      } catch {
-        // 渲染失败时回退为普通代码块
-        html = `<pre class="hljs"><code>${escapeHtml(mermaidCode)}</code></pre>`;
-      }
-    }
-
-    return {
+export async function splitBlocks(source: string): Promise<Block[]> {
+  const tree = parser.parse(source) as Root;
+  const blocks: Block[] = [];
+  for (const node of tree.children) {
+    blocks.push({
       id: crypto.randomUUID(),
-      source: blockSource,
-      type,
-      html,
-    };
-  });
+      source: extractSource(source, node),
+      type: nodeToType(node),
+      html: await renderNode(node),
+    });
+  }
+  return blocks;
+}
+
+// 将整段 Markdown 渲染为 HTML（用于编辑区预览），每个块用 .block 包裹以复用内容样式
+export async function renderMarkdown(source: string): Promise<string> {
+  const blocks = await splitBlocks(source);
+  return blocks.map((b) => `<div class="block">${b.html}</div>`).join("\n");
 }

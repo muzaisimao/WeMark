@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import AppIcon from "./AppIcon.vue";
 import type { IconName } from "../icons";
 import { useDocumentStore } from "../stores/document";
@@ -34,6 +34,26 @@ const editingId = computed(() =>
   doc.editorState.mode === "editing" ? doc.editorState.blockId : null
 );
 
+const bodyRef = ref<HTMLElement>();
+
+// 进入编辑某块时，若该块不在可视范围，滚动到视野内
+watch(editingId, (id) => {
+  if (!id) return;
+  nextTick(() => {
+    const container = bodyRef.value;
+    const el = container?.querySelector<HTMLElement>(
+      `[data-block-id="${id}"]`
+    );
+    if (!container || !el) return;
+    const cRect = container.getBoundingClientRect();
+    const eRect = el.getBoundingClientRect();
+    const visible = eRect.top >= cRect.top && eRect.bottom <= cRect.bottom;
+    if (!visible) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
+});
+
 function onBlockClick(e: MouseEvent, blockId: string) {
   const target = e.target as HTMLElement;
   // 点击链接、图片、勾选框等可交互元素时不进入编辑
@@ -62,20 +82,37 @@ function onBlockClick(e: MouseEvent, blockId: string) {
       </div>
     </header>
 
-    <div class="render__body">
+    <div ref="bodyRef" class="render__body">
       <div v-if="doc.blocks.length === 0" class="render__empty">
         <p class="render__empty-title">开始你的 Markdown 创作</p>
         <p class="render__empty-desc">选择左侧文档，或在下方向框中输入内容后发送</p>
       </div>
-      <article
-        v-for="block in doc.blocks"
+      <div
+        v-for="(block, index) in doc.blocks"
         :key="block.id"
-        class="block"
-        :class="{ 'block--editing': editingId === block.id }"
-        :data-type="block.type"
-        v-html="block.html"
-        @click="onBlockClick($event, block.id)"
-      />
+        class="block-row"
+        :class="{ 'block-row--editing': editingId === block.id }"
+        :data-block-id="block.id"
+      >
+        <span class="block-row__bar"></span>
+        <span class="block-row__num">{{ index + 1 }}</span>
+        <article
+          class="block"
+          :data-type="block.type"
+          @click="onBlockClick($event, block.id)"
+        >
+          <div v-if="block.html" v-html="block.html"></div>
+          <div v-else class="block__placeholder">输入内容…</div>
+        </article>
+        <button
+          class="block-row__insert"
+          type="button"
+          title="在下方插入"
+          @click.stop="doc.insertBlockAfter(block.id)"
+        >
+          +
+        </button>
+      </div>
     </div>
   </section>
 </template>
@@ -155,19 +192,103 @@ function onBlockClick(e: MouseEvent, blockId: string) {
   font-size: 13px;
 }
 
+.block-row {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  padding: 2px 0;
+  margin-bottom: 12px;
+}
+
+.block-row__bar {
+  width: 3px;
+  align-self: stretch;
+  border-radius: 2px;
+  margin-right: 6px;
+  background: transparent;
+  transition: background 0.12s;
+  flex-shrink: 0;
+}
+
+.block-row__num {
+  width: 28px;
+  flex-shrink: 0;
+  text-align: right;
+  padding-right: 10px;
+  padding-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+  user-select: none;
+}
+
 .block {
+  flex: 1;
+  min-width: 0;
   cursor: pointer;
   padding: 4px 8px;
+  margin-bottom: 0;
   border-radius: 8px;
-  transition: background 0.12s, box-shadow 0.12s;
+  border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s;
 }
 
-.block:hover {
+.block__placeholder {
+  color: var(--text-tertiary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.block-row:hover .block-row__bar {
+  background: var(--accent);
+}
+
+.block-row:hover .block {
   background: var(--hover);
+  border-color: var(--border);
 }
 
-.block--editing {
+.block-row--editing .block-row__bar {
+  background: var(--accent);
+}
+
+.block-row--editing .block {
   background: var(--active);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  border-color: var(--accent);
+}
+
+.block-row__insert {
+  position: absolute;
+  left: 50%;
+  bottom: -12px;
+  transform: translateX(-50%);
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+  padding: 0;
+}
+
+.block-row:hover .block-row__insert {
+  display: flex;
+}
+
+.block-row__insert:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.block-row--editing .block-row__insert {
+  display: none;
 }
 </style>
