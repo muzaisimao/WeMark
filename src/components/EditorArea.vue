@@ -261,7 +261,6 @@ function formatTime(ts: number): string {
           @click="togglePreview"
         >
           <AppIcon :name="previewMode ? 'code' : 'eye'" :size="16" />
-          <span>{{ previewMode ? '退出预览' : '预览' }}</span>
         </button>
         <span class="editor__divider"></span>
         <button
@@ -425,12 +424,21 @@ function formatTime(ts: number): string {
   flex: 1;
   min-width: 0;
   overflow-y: auto;
-  padding: 12px 16px;
+  padding: 16px;
   border-left: 1px solid var(--border);
   background: var(--bg);
   font-size: var(--editor-font-size);
   line-height: 1.6;
   color: var(--text);
+}
+
+/* 预览内容块间距：比渲染区略松（无 hover 分隔），整体更紧凑 */
+.editor__preview :deep(.block) {
+  margin-bottom: 8px;
+}
+
+.editor__preview :deep(.block:last-child) {
+  margin-bottom: 0;
 }
 
 .editor__toolbar {
@@ -477,17 +485,13 @@ function formatTime(ts: number): string {
   color: var(--text);
 }
 
-/* 预览切换按钮：独立分组、带文字与描边，更易点按 */
+/* 预览切换按钮：独立分组、描边图标按钮，active 时 accent 填充 */
 .editor__preview-toggle {
-  width: auto;
+  width: 30px;
   height: 30px;
-  padding: 0 12px;
-  gap: 6px;
   border: 1px solid var(--border);
   background: var(--panel-2);
   color: var(--text);
-  font-size: 12px;
-  font-weight: 500;
 }
 
 .editor__preview-toggle:hover {

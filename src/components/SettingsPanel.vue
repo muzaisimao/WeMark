@@ -23,6 +23,10 @@ function onCodeFont(e: Event) {
   settings.setCodeFontSize(Number((e.target as HTMLInputElement).value));
 }
 
+function onRenderFont(e: Event) {
+  settings.setRenderFontSize(Number((e.target as HTMLInputElement).value));
+}
+
 function onKeydown(e: KeyboardEvent) {
   if (e.key === "Escape" && props.open) {
     emit("close");
@@ -91,6 +95,21 @@ onUnmounted(() => window.removeEventListener("keydown", onKeydown));
                 max="20"
                 :value="settings.codeFontSize"
                 @input="onCodeFont"
+              />
+              <span class="settings__unit">px</span>
+            </div>
+          </section>
+
+          <section class="settings__group">
+            <div class="settings__label">渲染区字号</div>
+            <div class="settings__row">
+              <input
+                class="settings__number"
+                type="number"
+                min="12"
+                max="24"
+                :value="settings.renderFontSize"
+                @input="onRenderFont"
               />
               <span class="settings__unit">px</span>
             </div>

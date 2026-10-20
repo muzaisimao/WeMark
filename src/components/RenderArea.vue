@@ -94,8 +94,8 @@ function onBlockClick(e: MouseEvent, blockId: string) {
         :class="{ 'block-row--editing': editingId === block.id }"
         :data-block-id="block.id"
       >
-        <span class="block-row__bar"></span>
         <span class="block-row__num">{{ index + 1 }}</span>
+        <span class="block-row__bar"></span>
         <article
           class="block"
           :data-type="block.type"
@@ -196,33 +196,35 @@ function onBlockClick(e: MouseEvent, blockId: string) {
   display: flex;
   align-items: flex-start;
   position: relative;
-  padding: 2px 0;
-  margin-bottom: 12px;
-}
-
-.block-row__bar {
-  width: 3px;
-  align-self: stretch;
-  border-radius: 2px;
-  margin-right: 6px;
-  background: transparent;
-  transition: background 0.12s;
-  flex-shrink: 0;
+  padding: 0;
+  margin-bottom: 2px;
 }
 
 .block-row__num {
-  width: 24px;
+  width: 22px;
   flex-shrink: 0;
   text-align: right;
   padding-right: 8px;
-  padding-top: 4px;
-  font-size: 11px;
+  padding-top: 3px;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 1.6;
   font-variant-numeric: tabular-nums;
   color: var(--text-tertiary);
-  opacity: 0.55;
+  opacity: 0.6;
   user-select: none;
   transition: color 0.12s, opacity 0.12s;
+}
+
+/* 引导线：紧贴内容左侧、贯穿整块高度；激活时变 accent，与引用块灰色竖线区分 */
+.block-row__bar {
+  width: 2px;
+  align-self: stretch;
+  border-radius: 2px;
+  margin-right: 4px;
+  background: var(--border);
+  transition: background 0.12s;
+  flex-shrink: 0;
 }
 
 .block-row:hover .block-row__num,
@@ -235,9 +237,8 @@ function onBlockClick(e: MouseEvent, blockId: string) {
   flex: 1;
   min-width: 0;
   cursor: pointer;
-  padding: 4px 8px;
-  margin-bottom: 0;
-  border-radius: 8px;
+  padding: 4px;
+  border-radius: 6px;
   border: 1px solid transparent;
   transition: background 0.12s, border-color 0.12s;
 }
@@ -255,7 +256,6 @@ function onBlockClick(e: MouseEvent, blockId: string) {
 
 .block-row:hover .block {
   background: var(--hover);
-  border-color: var(--border);
 }
 
 .block-row--editing .block-row__bar {

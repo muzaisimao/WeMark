@@ -18,8 +18,9 @@
   --sidebar-width: 60px;
 
   /* 字号 */
-  --editor-font-size: 14px;
-  --code-font-size: 13px;
+  --editor-font-size: 16px;
+  --code-font-size: 14px;
+  --render-font-size: 16px;
 
   /* 圆角 */
   --radius: 6px;
@@ -96,14 +97,18 @@ textarea {
 
 /* Markdown 内容样式 */
 .block {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+  font-size: var(--render-font-size);
 }
 
-.block > :first-child {
+/* 渲染区 block 内容被外层 div 包裹，需同时归零首尾 margin，保证 hover 盒子内容居中 */
+.block > :first-child,
+.block > :first-child > :first-child {
   margin-top: 0;
 }
 
-.block > :last-child {
+.block > :last-child,
+.block > :last-child > :last-child {
   margin-bottom: 0;
 }
 
@@ -112,7 +117,7 @@ textarea {
 .block h3 { font-size: 17px; font-weight: 600; margin: 12px 0 6px; }
 .block h4, .block h5, .block h6 { font-size: 15px; font-weight: 600; margin: 12px 0 6px; }
 
-.block p { margin: 0 0 8px; }
+/* .block p { margin: 0 0 8px; } */
 
 .block ul, .block ol { padding-left: 24px; margin: 0 0 8px; }
 .block li { margin: 2px 0; }
@@ -152,7 +157,7 @@ textarea {
 }
 
 .block blockquote {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--text-tertiary);
   padding: 2px 12px;
   margin: 0 0 8px;
   color: var(--text-secondary);

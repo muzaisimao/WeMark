@@ -7,6 +7,7 @@ interface Settings {
   theme: ThemeMode;
   editorFontSize: number;
   codeFontSize: number;
+  renderFontSize: number;
   defaultDir: string;
 }
 
@@ -14,8 +15,9 @@ const STORAGE_KEY = "wemark.settings";
 
 const DEFAULTS: Settings = {
   theme: "system",
-  editorFontSize: 14,
-  codeFontSize: 13,
+  editorFontSize: 16,
+  codeFontSize: 14,
+  renderFontSize: 16,
   defaultDir: "",
 };
 
@@ -41,6 +43,7 @@ export const useSettingsStore = defineStore("settings", () => {
   const theme = ref<ThemeMode>(initial.theme);
   const editorFontSize = ref(clamp(initial.editorFontSize, 12, 24));
   const codeFontSize = ref(clamp(initial.codeFontSize, 11, 20));
+  const renderFontSize = ref(clamp(initial.renderFontSize, 12, 24));
   const defaultDir = ref(initial.defaultDir);
 
   // 系统深浅色偏好（跟随系统模式用）
@@ -68,11 +71,12 @@ export const useSettingsStore = defineStore("settings", () => {
 
   // 应用字号到 CSS 变量
   watch(
-    [editorFontSize, codeFontSize],
-    ([efs, cfs]) => {
+    [editorFontSize, codeFontSize, renderFontSize],
+    ([efs, cfs, rfs]) => {
       const root = document.documentElement;
       root.style.setProperty("--editor-font-size", `${efs}px`);
       root.style.setProperty("--code-font-size", `${cfs}px`);
+      root.style.setProperty("--render-font-size", `${rfs}px`);
     },
     { immediate: true }
   );
@@ -89,6 +93,10 @@ export const useSettingsStore = defineStore("settings", () => {
     if (!Number.isNaN(v)) codeFontSize.value = clamp(v, 11, 20);
   }
 
+  function setRenderFontSize(v: number) {
+    if (!Number.isNaN(v)) renderFontSize.value = clamp(v, 12, 24);
+  }
+
   function setDefaultDir(path: string) {
     defaultDir.value = path;
   }
@@ -96,7 +104,7 @@ export const useSettingsStore = defineStore("settings", () => {
   // 防抖持久化
   let timer: ReturnType<typeof setTimeout> | undefined;
   watch(
-    [theme, editorFontSize, codeFontSize, defaultDir],
+    [theme, editorFontSize, codeFontSize, renderFontSize, defaultDir],
     () => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
@@ -106,6 +114,7 @@ export const useSettingsStore = defineStore("settings", () => {
             theme: theme.value,
             editorFontSize: editorFontSize.value,
             codeFontSize: codeFontSize.value,
+            renderFontSize: renderFontSize.value,
             defaultDir: defaultDir.value,
           })
         );
@@ -117,11 +126,13 @@ export const useSettingsStore = defineStore("settings", () => {
     theme,
     editorFontSize,
     codeFontSize,
+    renderFontSize,
     defaultDir,
     resolvedTheme,
     setTheme,
     setEditorFontSize,
     setCodeFontSize,
+    setRenderFontSize,
     setDefaultDir,
   };
 });
