@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import AppIcon from "./AppIcon.vue";
+import SettingsPanel from "./SettingsPanel.vue";
 import type { IconName } from "../icons";
 import { useDocumentStore } from "../stores/document";
 
 const doc = useDocumentStore();
+const showSettings = ref(false);
 
 interface SideItem {
   key: string;
@@ -19,7 +22,7 @@ const topItems: SideItem[] = [
 ];
 
 const bottomItems: SideItem[] = [
-  { key: "settings", label: "设置", icon: "settings" },
+  { key: "settings", label: "设置", icon: "settings", action: () => (showSettings.value = true) },
 ];
 </script>
 
@@ -44,10 +47,13 @@ const bottomItems: SideItem[] = [
         class="sidebar__btn"
         :title="item.label"
         type="button"
+        @click="item.action"
       >
         <AppIcon :name="item.icon" :size="22" />
       </button>
     </div>
+
+    <SettingsPanel :open="showSettings" @close="showSettings = false" />
   </aside>
 </template>
 

@@ -6,9 +6,12 @@ import RenderArea from "./components/RenderArea.vue";
 import EditorArea from "./components/EditorArea.vue";
 import { useLayoutStore } from "./stores/layout";
 import { useDocumentStore } from "./stores/document";
+import { useSettingsStore } from "./stores/settings";
 
 const layout = useLayoutStore();
 const doc = useDocumentStore();
+// 初始化设置（应用主题/字号，尽早执行避免闪烁）
+useSettingsStore();
 
 // 全局保存快捷键 Cmd/Ctrl+S
 function onGlobalKeydown(e: KeyboardEvent) {

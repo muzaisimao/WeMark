@@ -307,7 +307,7 @@ function formatTime(ts: number): string {
   outline: none;
   resize: none;
   background: transparent;
-  font-size: 14px;
+  font-size: var(--editor-font-size);
   line-height: 1.6;
   color: var(--text);
 }

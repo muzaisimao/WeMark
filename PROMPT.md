@@ -22,8 +22,17 @@ https://github.com/CatVinci-Studio/Textus
 参考项目：https://github.com/CatVinci-Studio/Textus
 
 1. 接第三方渲染器，做好看一下，还是可以参照这个项目，这个项目渲染、编辑部分做的很好，（行号、插入块这些功能用第三方渲染器好扩展吗，还是自己实现比较好，你建议一下，如果有推荐渲染器的话，我们一起确认一下）
-2. 每个块旁边加上块号， 1、2、3这样
+2. 每个块旁边加上块号， 1、2、3这样，鼠标hover到没个块上的时候，有hover效果
 3. 编辑区也加一个可以预览效果的功能，用来看看效果，可以做预览、编辑切换
 4. 编辑记录区点击到某一块，不在渲染视图里的时候，要滚动到当前位置
 5. 现在可以新增块，编辑块，但是不能在某一个块里面插入，你觉得怎么实现这个好一些呢，鼠标悬浮到某一个块的时候，块边框下面显示+号还是其他方式
+6. 发现一个bug, 文档区与渲染区调整大小的地方，绿色的线的位置没显示的时候也会占一个空间，导致有一条空着的竖线，很不协调，编辑区和渲染区调整的就没有
 
+---
+发布到Github, reles,z
+
+目录，块拖拽
+
+https://github.com/remarkjs/remark
+https://github.com/unifiedjs/unified
+https://unifiedjs.com/explore/package/remark-parse/

@@ -142,8 +142,8 @@ WeMark 是一款基于 Markdown 的桌面文本编辑器，核心差异在于：
 | T6 | 实现文档列表（置顶、树级展开、搜索） | P0 | T1 | ✅ | `specs/04-document-manager.md` |
 | T7 | 实现编辑区快捷工具栏与图片上传 | P1 | T5 | ✅ | `specs/05-editor-toolbar.md` |
 | T8 | 实现 Tauri 文件系统读写（新建/打开/保存） | P1 | T1 | ✅ | `specs/06-filesystem.md` |
-| T9 | 实现功能栏与设置入口 | P1 | T1 | ⏳ | `specs/07-navbar-settings.md` |
-| T10 | 实现主题切换（深色/浅色/跟随系统）与设置持久化 | P1 | T9 | ⏳ | `specs/07-navbar-settings.md` |
+| T9 | 实现功能栏与设置入口 | P1 | T1 | ✅ | `specs/07-navbar-settings.md` |
+| T10 | 实现主题切换（深色/浅色/跟随系统）与设置持久化 | P1 | T9 | ✅ | `specs/07-navbar-settings.md` |
 | T11 | 实现区域拖拽调整大小（文档列表栏宽度、编辑区高度） | P1 | T2 | ✅ | `specs/01-scaffold-layout.md` |
 
 ## 8. 子 PRD 规范
