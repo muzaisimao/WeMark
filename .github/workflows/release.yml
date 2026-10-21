@@ -6,10 +6,11 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
-    permissions:
-      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -18,8 +19,6 @@ jobs:
             args: '--target aarch64-apple-darwin'
           - platform: 'macos-latest' # Intel
             args: '--target x86_64-apple-darwin'
-          - platform: 'ubuntu-22.04'
-            args: ''
           - platform: 'windows-latest'
             args: ''
 
@@ -47,12 +46,6 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
-
-      - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install frontend dependencies
         run: pnpm install --no-frozen-lockfile
