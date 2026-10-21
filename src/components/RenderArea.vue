@@ -94,8 +94,8 @@ function onBlockClick(e: MouseEvent, blockId: string) {
         :class="{ 'block-row--editing': editingId === block.id }"
         :data-block-id="block.id"
       >
-        <span class="block-row__num">{{ index + 1 }}</span>
         <span class="block-row__bar"></span>
+        <span class="block-row__num">{{ index + 1 }}</span>
         <article
           class="block"
           :data-type="block.type"
@@ -197,7 +197,7 @@ function onBlockClick(e: MouseEvent, blockId: string) {
   align-items: flex-start;
   position: relative;
   padding: 0;
-  margin-bottom: 2px;
+  margin-bottom: 0;
 }
 
 .block-row__num {
@@ -205,7 +205,7 @@ function onBlockClick(e: MouseEvent, blockId: string) {
   flex-shrink: 0;
   text-align: right;
   padding-right: 8px;
-  padding-top: 3px;
+  padding-top: 5px;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.6;
@@ -216,12 +216,13 @@ function onBlockClick(e: MouseEvent, blockId: string) {
   transition: color 0.12s, opacity 0.12s;
 }
 
-/* 引导线：紧贴内容左侧、贯穿整块高度；激活时变 accent，与引用块灰色竖线区分 */
+/* 引导线：靠近渲染区左边框、贯穿整块高度；激活时变 accent，与引用块灰色竖线区分 */
 .block-row__bar {
   width: 2px;
   align-self: stretch;
   border-radius: 2px;
-  margin-right: 4px;
+  margin-left: -6px;
+  margin-right: 8px;
   background: var(--border);
   transition: background 0.12s;
   flex-shrink: 0;
@@ -252,10 +253,6 @@ function onBlockClick(e: MouseEvent, blockId: string) {
 
 .block-row:hover .block-row__bar {
   background: var(--accent);
-}
-
-.block-row:hover .block {
-  background: var(--hover);
 }
 
 .block-row--editing .block-row__bar {
