@@ -80,6 +80,22 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
+## macOS 未签名提示
+
+当前版本未配置 Apple 开发者签名与公证，首次打开从 Release 下载的 `.dmg` 安装的应用时，macOS 可能提示「已损坏，无法打开」或「无法验证开发者」。
+
+将 `WeMark.app` 拖入「应用程序」文件夹后，在终端执行以下命令移除隔离属性即可正常打开：
+
+```bash
+xattr -cr /Applications/WeMark.app
+```
+
+若提示权限不足，可加 `sudo`：
+
+```bash
+sudo xattr -cr /Applications/WeMark.app
+```
+
 ## 许可证
 
 [MIT](./LICENSE)
